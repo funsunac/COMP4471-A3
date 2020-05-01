@@ -116,7 +116,7 @@ def rnn_forward(x, h0, Wx, Wh, b):
 
     cache = []
     h = np.empty((N, T, H))
-    
+
     ht = h0
     for t in range(T):
         xt = x[:,t]
@@ -196,7 +196,8 @@ def word_embedding_forward(x, W):
     #                                                                            #
     # HINT: This can be done in one line using NumPy's array indexing.           #
     ##############################################################################
-    pass
+    out = W[x]
+    cache = {'x' : x, 'V' : W.shape[0]}
     ##############################################################################
     #                               END OF YOUR CODE                             #
     ##############################################################################
@@ -225,7 +226,11 @@ def word_embedding_backward(dout, cache):
     # Note that Words can appear more than once in a sequence.                   #
     # HINT: Look up the function np.add.at                                       #
     ##############################################################################
-    pass
+    # Need to use np.add.at, because some rows in dW[x] may be sourced from the 
+    # same row (e.g. dW[[[1,0,1]]])
+    x, V, D = cache['x'], cache['V'], dout.shape[2]
+    dW = np.zeros((V, D))
+    np.add.at(dW, x, dout)
     ##############################################################################
     #                               END OF YOUR CODE                             #
     ##############################################################################
