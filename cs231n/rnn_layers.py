@@ -276,7 +276,22 @@ def lstm_step_forward(x, prev_h, prev_c, Wx, Wh, b):
     # TODO: Implement the forward pass for a single timestep of an LSTM.        #
     # You may want to use the numerically stable sigmoid implementation above.  #
     #############################################################################
-    pass
+    H = prev_h.shape[1]
+    
+    a = x.dot(Wx) + prev_h.dot(Wh) + b
+    
+    i = sigmoid(a[:,:H])
+    f = sigmoid(a[:,H:2*H])
+    o = sigmoid(a[:,2*H:3*H])
+    g = np.tanh(a[:,3*H:])
+
+    next_c = f * prev_c + i * g
+    next_h = o * np.tanh(next_c)
+
+    cache = {'i' : i, 'f' : f, 'o' : o, 'g' : g,
+             'prev_c' : prev_c, 'prev_h': prev_h, 
+             'tanh_next_c' : np.tanh(next_c),
+             'x' : x, 'Wx' : Wx, 'Wh' : Wh}
     ##############################################################################
     #                               END OF YOUR CODE                             #
     ##############################################################################
@@ -308,7 +323,41 @@ def lstm_step_backward(dnext_h, dnext_c, cache):
     # HINT: For sigmoid and tanh you can compute local derivatives in terms of  #
     # the output value from the nonlinearity.                                   #
     #############################################################################
-    pass
+    i, f, o, g = cache['i'], cache['f'], cache['o'], cache['g']
+    prev_c, prev_h = cache['prev_c'], cache['prev_h']
+    tanh_next_c = cache['tanh_next_c']
+    x, Wx, Wh = cache['x'], cache['Wx'], cache['Wh']
+    H = prev_c.shape[1]
+
+    dsigmoid = lambda sigm : sigm * (1 - sigm)
+    dtanh = lambda tanh : 1 - tanh**2
+
+    # Forgot that i, f, g contributes to next_h on first try:
+    # Complete formula should be:
+    #   (df/dnext_h * dnext_h/dnext_c * dnext_c/di) + (df/dnext_c * dnext_c/di)
+    # which, in terms of the code should be
+    #   dnext_h * o * dtanh(tanh_nc) * g + dnext_c * g
+    # = [dnext_h * o * dtanh(tanh_nc) + dnext_c] * g
+    
+    dnext_c_combined = dnext_h * o * dtanh(tanh_next_c) + dnext_c
+
+    di = g * dnext_c_combined
+    df = prev_c * dnext_c_combined
+    do = dnext_h * tanh_next_c
+    dg = i * dnext_c_combined
+
+    da = np.empty((i.shape[0], i.shape[1]*4))
+    da[:,:H] = di * dsigmoid(i)
+    da[:,H:2*H] = df * dsigmoid(f)
+    da[:,2*H:3*H] = do * dsigmoid(o)
+    da[:,3*H:] = dg * dtanh(g)
+
+    dx = da.dot(Wx.T)
+    dprev_h = da.dot(Wh.T)
+    dprev_c = dnext_c_combined * f
+    dWx = x.T.dot(da)
+    dWh = prev_h.T.dot(da)
+    db = da.sum(axis=0)
     ##############################################################################
     #                               END OF YOUR CODE                             #
     ##############################################################################
