@@ -216,21 +216,25 @@ class CaptioningRNN(object):
         # HINT: You will not be able to use the rnn_forward or lstm_forward       #
         # functions; you'll need to call rnn_step_forward or lstm_step_forward in #
         # a loop.                                                                 #
-        ###########################################################################
+        ###########################################################################   
+        start = self._start * np.ones((N, 1), dtype=np.int32)
+        ht, _ = affine_forward(features, W_proj, b_proj)
+        words, _ = word_embedding_forward(start, W_embed)
+       
         if self.cell_type == 'rnn':
             recur_step_forward = rnn_step_forward
             recur_step_backward = rnn_step_backward
         else: # self.cell_type == 'lstm'
             recur_step_forward = lstm_step_forward
-            recur_step_backward = lstm_step_backward       
-            
-        start = self._start * np.ones((N, 1), dtype=np.int32)
-        h, _ = affine_forward(features, W_proj, b_proj)
-        words, _ = word_embedding_forward(start, W_embed)
-        
+            recur_step_backward = lstm_step_backward
+            ct = np.zeros(ht.shape)
+
         for t in range(max_length):
-            h, _ = recur_step_forward(words.reshape(N, -1), h, Wx, Wh, b)
-            s, _ = affine_forward(h, W_vocab, b_vocab)
+            if self.cell_type == 'rnn':
+                ht, _ = recur_step_forward(words.reshape(N, -1), ht, Wx, Wh, b)
+            else:
+                ht, ct, _ = recur_step_forward(words.reshape(N, -1), ht,ct, Wx, Wh, b)
+            s, _ = affine_forward(ht, W_vocab, b_vocab)
             idx = s.argmax(axis=1)
             captions[:,t] = idx
         ############################################################################
