@@ -5,9 +5,9 @@ from builtins import range
 import urllib.request, urllib.error, urllib.parse, os, tempfile
 
 import numpy as np
-# from scipy.misc import imread, imresize
-from imageio import imread
-from PIL import Image
+from scipy.misc import imread, imresize
+# from imageio import imread
+# from PIL import Image
 
 """
 Utility functions used for viewing and processing images.
@@ -87,6 +87,6 @@ def load_image(filename, size=None):
         min_idx = np.argmin(orig_shape)
         scale_factor = float(size) / orig_shape[min_idx]
         new_shape = (orig_shape * scale_factor).astype(int)
-#         img = imresize(img, scale_factor)
-        img = np.array(Image.fromarray(img).resize(new_shape))
+        img = imresize(img, scale_factor)
+        # img = np.array(Image.fromarray(img).resize(new_shape))
     return img
